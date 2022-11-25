@@ -1,0 +1,53 @@
+name: consumer # you probably want to 'snapcraft register <name>'
+base: core20 # the base snap is the execution environment for this snap
+version: '0.1' # just for humans, typically '1.2+git' or '1.3.2'
+summary: Single-line elevator pitch for your amazing snap # 79 char long summary
+description: |
+  This is my-snap's description. You have a paragraph or two to tell the
+  most important story about your snap. Keep it under 100 words though,
+  we live in tweetspace and your description wants to look good in the snap
+  store.
+
+grade: devel # must be 'stable' to release into candidate/stable channels
+confinement: devmode # use 'strict' once you have the right plugs and slots
+
+
+apps:
+  command1:
+    command: command1.sh
+  provider:
+    command: provider.sh
+
+
+parts:
+  my-part:
+    # See 'snapcraft plugins'
+    plugin: dump
+    source: src
+
+
+#use this conetent interface to access files shiped with provider snap(BSP-snap)    
+plugs:
+  bsp-snap-executables:
+    interface: content
+    content: executables
+    target: $SNAP_DATA/bsp-bin
+
+
+#Redirect call to /data,/bt_firmware, /firmware, /overlay, /persist, and /system to corresponding folder in $SNAP
+layout:
+#  /data: error: cannot pack "/home/ubuntu/consuer_snap/prime": cannot validate snap "consumer": layout "/data" defines a new top-level directory "/data"
+  /var/lib/misc/data:   # redirect access to /var/lib/misc/data to $SNAP_DATA/bsp-bin/data
+    symlink: $SNAP_DATA/bsp-bin/data
+  #/firmware/:
+  #  symlink: $SNAP/bsp-bin/firmware
+  #  /bt_firmware:
+  #symlink: $SNAP/bsp-bin/bt_firmware
+  #/overlay:
+  #symlink: $SNAP/bsp-bin/overlay
+  #/persist:
+  #symlink: $SNAP/bsp-bin/persist
+  #/system:
+  #symlink: $SNAP/bsp-bin/system
+
+
