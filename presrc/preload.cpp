@@ -148,6 +148,8 @@ Initializer::Initializer()
     
     //redirect to $SNAP_DATA
     saved_override = getenv_string("SNAP_DATA");
+    //adjust saved_override 
+    saved_override = saved_override + "/bsp-bin";
 
     saved_varlib = getenv_string ("SNAP_DATA");
     saved_snap_instance_name = getenv_string ("SNAP_INSTANCE_NAME");
@@ -227,10 +229,11 @@ redirect_writable_path (std::string const& pathname, std::string const& basepath
 std::string
 redirect_path_full (std::string const& pathname, bool check_parent, bool only_if_absolute)
 {
+    fprintf(stderr, "Entered reicrect_Path_full %s\n",pathname.c_str());
+
     if (pathname.empty ()) {
         return pathname;
     }
-
     const std::string& preload_dir = saved_snapcraft_preload;
     if (preload_dir.empty()) {
         return pathname;
@@ -387,7 +390,7 @@ inline R
 redirect_n(Ts... as)
 {
     std::tuple<Ts...> tpl(as...);
-    const char *path = std::get<PATH_IDX>(tpl);
+    const char *path = std::get<PATH_IDX>(tpl);   //retrieve path from tuple.
     static std::function<R(Ts...)> func (reinterpret_cast<R(*)(Ts...)> (dlsym (RTLD_NEXT, FUNC_NAME)));
 
     if (path != NULL) {
@@ -395,6 +398,9 @@ redirect_n(Ts... as)
         std::get<PATH_IDX>(tpl) = new_path.c_str ();
         R result = call_with_tuple_args (func, tpl);
         std::get<PATH_IDX>(tpl) = path;
+	fprintf(stderr,"Hiro path is %s\n",path);
+	fprintf(stderr,"Hiro new_path is %s\n",new_path.c_str());
+
         return result;
     }
 
@@ -413,7 +419,7 @@ struct va_separator {};
 template<typename R, const char *FUNC_NAME, typename REDIRECT_PATH_TYPE, size_t PATH_IDX, typename... Ts>
 inline R
 redirect_open(Ts... as, va_separator, va_list va)
-{
+{ 
     mode_t mode = 0;
     int flags = std::get<PATH_IDX+1>(std::tuple<Ts...>(as...));
 
