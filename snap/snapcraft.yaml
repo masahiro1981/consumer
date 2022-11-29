@@ -17,13 +17,38 @@ apps:
     command: command1.sh
   provider:
     command: provider.sh
+  preprovider:
+    command: usr/bin/snapcraft-preload $SNAP_DATA/bin/readfile
 
 
 parts:
-  my-part:
-    # See 'snapcraft plugins'
-    plugin: dump
-    source: src
+    my-part:
+      # See 'snapcraft plugins'
+        plugin: dump
+        source: src
+
+    snapcraft-preload:
+        source: presrc
+        plugin: cmake
+        cmake-parameters:
+            - -DCMAKE_INSTALL_PREFIX=/usr -DLIBPATH=/lib
+        build-packages:
+            - on amd64:
+                - gcc-multilib
+                - g++-multilib
+        #stage-packages:
+        #    - on amd64:
+        #        - lib32stdc++6
+
+    # We keep the 'preload' part to be backward compatible
+    preload:
+      plugin: nil
+      override-build: |
+        snapcraftctl build
+        mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+        ln -sv $SNAPCRAFT_PART_INSTALL/usr/bin/snapcraft-preload $SNAPCRAFT_PART_INSTALL/bin/preload
+      after: [snapcraft-preload]
+
 
 
 #use this conetent interface to access files shiped with provider snap(BSP-snap)    
@@ -35,10 +60,10 @@ plugs:
 
 
 #Redirect call to /data,/bt_firmware, /firmware, /overlay, /persist, and /system to corresponding folder in $SNAP
-layout:
+#layout:
 #  /data: error: cannot pack "/home/ubuntu/consuer_snap/prime": cannot validate snap "consumer": layout "/data" defines a new top-level directory "/data"
-  /var/lib/misc/data:   # redirect access to /var/lib/misc/data to $SNAP_DATA/bsp-bin/data
-    symlink: $SNAP_DATA/bsp-bin/data
+  #/var/lib/misc/data:   # redirect access to /var/lib/misc/data to $SNAP_DATA/bsp-bin/data
+  #    symlink: $SNAP_DATA/bsp-bin/data
   #/firmware/:
   #  symlink: $SNAP/bsp-bin/firmware
   #  /bt_firmware:
