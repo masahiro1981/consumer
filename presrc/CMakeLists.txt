@@ -23,7 +23,7 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 set(SNAPCRAFT_PRELOAD "snapcraft-preload")
 set(LIBNAME "lib${SNAPCRAFT_PRELOAD}")
-set(LIBPATH "lib")
+set(LIBPATH "/usr/lib")
 add_library(${SNAPCRAFT_PRELOAD} SHARED preload.cpp)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
