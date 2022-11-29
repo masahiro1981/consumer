@@ -76,6 +76,8 @@ const std::string DEFAULT_NAME = "/dev/block/bootdevice/by-name";
 static sem_t *(*original_sem_open) (const char *, int, ...);
 static int (*original_sem_unlink) (const char *);
 
+//declare variables which saves override path?
+
 std::string saved_snapcraft_preload;
 bool saved_snapcraft_preload_redirect_only_shm;
 std::string saved_varlib;
@@ -83,7 +85,8 @@ std::string saved_snap_instance_name;
 std::string saved_snap_revision;
 std::string saved_snap_devshm;
 std::string saved_snap_sem;
-const std::string saved_override = "/home/ubuntu";
+//const std::string saved_override = "/home/ubuntu";
+std::string saved_override;
 
 std::vector<std::string> saved_ld_preloads;
 
@@ -133,6 +136,7 @@ Initializer::Initializer()
     std::string const& ld_preload = getenv_string (LD_PRELOAD);
     if (ld_preload.empty ()) {
         return;
+    
     }
 
     saved_snapcraft_preload = getenv_string (SNAPCRAFT_PRELOAD);
@@ -141,6 +145,9 @@ Initializer::Initializer()
     }
 
     saved_snapcraft_preload_redirect_only_shm = getenv_string(SNAPCRAFT_PRELOAD_REDIRECT_ONLY_SHM).compare("1") == 0;
+    
+    //redirect to $SNAP_DATA
+    saved_override = getenv_string("SNAP_DATA");
 
     saved_varlib = getenv_string ("SNAP_DATA");
     saved_snap_instance_name = getenv_string ("SNAP_INSTANCE_NAME");
@@ -193,6 +200,7 @@ string_length_sanitize(std::string& path)
     }
 }
 
+// This function is called with pathname:   basepath:saved_override ($SNAP_DATA)
 std::string
 redirect_writable_path (std::string const& pathname, std::string const& basepath)
 {
@@ -203,7 +211,7 @@ redirect_writable_path (std::string const& pathname, std::string const& basepath
     std::cerr << "snapcraft-preload: pathname '" << pathname << "', basepath '" << basepath << "'\n";
 
     std::string redirected_pathname (basepath);
-
+    //get rid of last "/" if original and override path ends in "/"... but why?
     if (redirected_pathname.back () == '/' && pathname.back () == '/') {
         redirected_pathname.resize (redirected_pathname.size () - 1);
     }
@@ -261,42 +269,52 @@ redirect_path_full (std::string const& pathname, bool check_parent, bool only_if
         }
     }
 
+    //Add more rules for redirection here
+
+    //Rule for /system/
     if (pathname == DEFAULT_SYSTEM || str_starts_with (pathname, DEFAULT_SYSTEM + '/')) {
 	return redirect_writable_path (pathname, saved_override);
     }
-
+    
+    //Rule for /data/
     if (pathname == DEFAULT_DATA || str_starts_with (pathname, DEFAULT_DATA + '/')) {
 	return redirect_writable_path (pathname, saved_override);
     }
 
+    //Rule for /firmware/
     if (pathname == DEFAULT_FIRMWARE || str_starts_with (pathname, DEFAULT_FIRMWARE + '/')) {
 	return redirect_writable_path (pathname, saved_override);
     }
 
+    //Rule for /vendor/firmware/
     if (pathname == DEFAULT_VEN_FIRMWARE || str_starts_with (pathname, DEFAULT_VEN_FIRMWARE + '/')) {
 	return redirect_writable_path (pathname, saved_override);
     }
 
+    //Rule for /dev/block/bootdevice/by-name here
     if (pathname == DEFAULT_NAME || str_starts_with (pathname, DEFAULT_NAME + '/')) {
 	return redirect_writable_path (pathname, saved_override);
     }
-
+    
+    // Get rid of last "/" but why?
     redirected_pathname = preload_dir;
     if (redirected_pathname.back () == '/') {
         redirected_pathname.resize(redirected_pathname.size ()-1);
     }
 
+    //Convert relative path to absolute path???  
     if (pathname[0] != '/') {
         std::string cwd;
         cwd.reserve(PATH_MAX);
         if (getcwd (const_cast<char*>(cwd.data ()), PATH_MAX) == NULL) {
-            return pathname;
+            return pathname; //failed to obtain pointer to currenct directory name
         }
 
         redirected_pathname += cwd + '/';
     }
-
     redirected_pathname += pathname;
+
+    //Check path starts from "/".... I.E. absolute path?
     size_t slash_pos = std::string::npos;
 
     if (check_parent) {
@@ -306,6 +324,7 @@ redirect_path_full (std::string const& pathname, bool check_parent, bool only_if
         }
     }
 
+    //Check if the file exists
     int ret = _access (redirected_pathname.c_str (), F_OK);
 
     if (check_parent && slash_pos != std::string::npos) {
@@ -965,3 +984,5 @@ sem_unlink(const char *name)
 
 	return original_sem_unlink(rewritten);
 }
+
+
