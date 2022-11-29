@@ -18,8 +18,9 @@ apps:
   provider:
     command: provider.sh
   preprovider:
-    command: usr/bin/snapcraft-preload $SNAP_DATA/bin/readfile
-
+    command: usr/bin/snapcraft-preload $SNAP_DATA/bsp-bin/bin/readfile
+  consumerout:
+    command: usr/bin/snapcraft-preload $SNAP/a.out
 
 parts:
     my-part:
